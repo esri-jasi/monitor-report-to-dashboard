@@ -15,11 +15,12 @@ profileName = "dashboard"
 import keyring
 import requests
 import datetime
+from dateutil.parser import parse
 from arcgis.gis import GIS
 
 # main
 password=keyring.get_password(system, username)
-gis = GIS(profile=profileName)
+gis = GIS(profile=profileName, verify_cert=False)
 
 # report time interval
 d = datetime.datetime.now() - datetime.timedelta(days=1)
@@ -48,7 +49,7 @@ r.raise_for_status()
 alerts=r.json()
 
 newAlerts=[]
-t=datetime.datetime.fromtimestamp(alerts['time']//1000.0)
+t=datetime.datetime.fromtimestamp(alerts['time']//1000)
 for collection in alerts['data']:
     if collection['hasAlerts']:
         collectionName=''
@@ -65,14 +66,14 @@ for collection in alerts['data']:
                 counterInstance=counter['counterInstance']
                 counterValue=counter['value']
                 dashboardAlertAttributes={
-                    "t":str(t),
-                    "collectionName":collectionName,
-                    "counterType":counterType,
-                    "viewName":viewName,
-                    "counterName":counterName,
-                    "counterCategory":counterCategory,
-                    "counterInstance":counterInstance,
-                    "counterValue":str(counterValue)
+                    "t":t.timestamp()*1000,
+                    "collectionname":collectionName,
+                    "countertype":counterType,
+                    "viewname":viewName,
+                    "countername":counterName,
+                    "countercategory":counterCategory,
+                    "counterinstance":counterInstance,
+                    "countervalue":str(counterValue)
                 }
                 dashboardAlert={"attributes":dashboardAlertAttributes}
                 newAlerts.append(dashboardAlert)
@@ -84,21 +85,21 @@ r.raise_for_status()
 avail=r.json()
 
 newAvailabilities=[]
-t=datetime.datetime.fromtimestamp(avail['time']//1000.0)
+t=datetime.datetime.fromtimestamp(avail['time']//1000)
 for collection in avail['data']:
     collectionName=''
     for c in collections:
         if c['collectionId']==collection['collectionId']:
             collectionName=c['collectionName']
     availability = collection['availability']
-    evalStart=availability['evalStart']
-    evalEnd=availability['evalEnd']
+    evalStart=parse(availability['evalStart'])
+    evalEnd=parse(availability['evalEnd'])
     a=availability['availability']
     dashboardAvailAttributes={
-        "t":str(t),
-        "collectionName":collectionName,
-        "evalStart":evalStart,
-        "evalEnd":evalEnd,
+        "t":t.timestamp()*1000,
+        "collectionname":collectionName,
+        "evalstart":evalStart.timestamp()*1000,
+        "evalend":evalEnd.timestamp()*1000,
         "availability":a
     }
     dashboardAvail={"attributes":dashboardAvailAttributes}
@@ -106,11 +107,12 @@ for collection in avail['data']:
 
 # Add records to ArcGIS Online or Portal tables (feature serivces)
 item = gis.content.get(featureServiceID)
+#availabilityItem = gis.content.get(availabilityFSid)
 
 # Alerts
-tableAlerts=item.tables[1]
+tableAlerts=item.tables[0]
 tableAlerts.edit_features(adds = newAlerts)
 
 # Availability
-tableAvailability=item.tables[0]
+tableAvailability=item.tables[1]
 tableAvailability.edit_features(adds = newAvailabilities)

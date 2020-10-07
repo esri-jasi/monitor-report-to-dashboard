@@ -11,6 +11,9 @@ Publish "MonitorDashboard" Feature Service to Portal or Online by Content: Add I
 
 Write down itemid of the service, that will be needed later at the config.
 
+Note, that editing must be enabled on Feature Layer.
+* Enable editing (adds) on Feature Layer (hosted service)
+
 
 ## 2. ArcGIS API for Python
 
